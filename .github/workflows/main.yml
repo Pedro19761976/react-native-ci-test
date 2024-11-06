@@ -1,14 +1,119 @@
-on: [push]
-jobs:
-  react_native_ci_job:
-    runs-on: ubuntu-latest
-    name: React Native CI Build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: React Native CI
-        uses: aslamanver/react-native-docker@v1
-      - name: Install NPM Dependencies
-        run: npm install
-      - name: Run NX Dev Android Build
-        run: npx nx build-android mobile
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { TextInput, Button } from 'react-native-paper';
+
+const R = 8.314; // Constante universal dos gases (J/(mol·K))
+const M = 2.01588; // Massa molar do hidrogênio (kg/mol)
+
+export default function CalculadoraHidrogenio() {
+  const [state, setState] = useState({
+    massaKg: '',
+    nm3: '',
+    pressaoBar: '',
+    tempC: '',
+    tempK: '',
+    volumeM3: '',
+    volumeL: '',
+  });
+
+  const updateState = (key: string, value: string) => {
+    setState(prev => ({ ...prev, [key]: value }));
+  };
+
+  useEffect(() => {
+    calcularValores();
+  }, [state]);
+
+  const calcularValores = () => {
+    const { massaKg, nm3, pressaoBar, tempC, tempK, volumeM3, volumeL } = state;
+
+    if (massaKg) {
+      const m = parseFloat(massaKg);
+      updateState('nm3', ((m / M) * 22.4).toFixed(4));
+      if (pressaoBar && (tempC || tempK)) {
+        const t = tempK ? parseFloat(tempK) : parseFloat(tempC) + 273.15;
+        const p = parseFloat(pressaoBar) * 100000; // Bar para Pascal
+        const v = (m * R * t) / (p * M);
+        updateState('volumeM3', v.toFixed(4));
+        updateState('volumeL', (v * 1000).toFixed(4));
+      }
+    }
+
+    if (nm3) {
+      const n = parseFloat(nm3) / 22.4;
+      updateState('massaKg', (n * M).toFixed(4));
+    }
+
+    if (pressaoBar && volumeM3 && (tempC || tempK)) {
+      const t = tempK ? parseFloat(tempK) : parseFloat(tempC) + 273.15;
+      const p = parseFloat(pressaoBar) * 100000; // Bar para Pascal
+      const v = parseFloat(volumeM3);
+      const m = (p * v * M) / (R * t);
+      updateState('massaKg', m.toFixed(4));
+      updateState('nm3', ((m / M) * 22.4).toFixed(4));
+    }
+
+    if (tempC && !tempK) {
+      updateState('tempK', (parseFloat(tempC) + 273.15).toFixed(2));
+    }
+
+    if (tempK && !tempC) {
+      updateState('tempC', (parseFloat(tempK) - 273.15).toFixed(2));
+    }
+
+    if (volumeM3 && !volumeL) {
+      updateState('volumeL', (parseFloat(volumeM3) * 1000).toFixed(4));
+    }
+
+    if (volumeL && !volumeM3) {
+      updateState('volumeM3', (parseFloat(volumeL) / 1000).toFixed(4));
+    }
+  };
+
+  const renderInput = (label: string, key: string, unit: string) => (
+    <TextInput
+      label={`${label} (${unit})`}
+      value={state[key]}
+      onChangeText={(text) => updateState(key, text)}
+      keyboardType="numeric"
+      style={styles.input}
+      mode="outlined"
+    />
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Calculadora de Hidrogênio</Text>
+      {renderInput('Massa', 'massaKg', 'kg')}
+      {renderInput('Volume Normal', 'nm3', 'Nm³')}
+      {renderInput('Pressão', 'pressaoBar', 'bar')}
+      {renderInput('Temperatura', 'tempC', '°C')}
+      {renderInput('Temperatura', 'tempK', 'K')}
+      {renderInput('Volume', 'volumeM3', 'm³')}
+      {renderInput('Volume', 'volumeL', 'L')}
+      <Button mode="contained" onPress={calcularValores} style={styles.button}>
+        Calcular
+      </Button>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  input: {
+    marginBottom: 12,
+  },
+  button: {
+    marginTop: 16,
+  },
+});
